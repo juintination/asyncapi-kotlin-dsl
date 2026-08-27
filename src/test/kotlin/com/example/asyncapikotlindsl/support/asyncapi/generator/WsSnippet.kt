@@ -1,27 +1,23 @@
 package com.example.asyncapikotlindsl.support.asyncapi.generator
 
 /**
- * SSE 채널 하나에 대한 스니펫. `receive` action 의 channel/operation 조각을 만든다.
+ * raw WebSocket 채널 하나에 대한 스니펫.
  *
- * 메시지는 채널 안에 인라인으로 담는다 (공유 `components` 없음 — 조각 간 덮어쓰기 불가).
- *
- * @param payloadSchema [SchemaBuilder.build] 결과
- * @param examplePayload 테스트에서 실제로 수신한 payload
+ * 채널에 request/response 두 메시지를 **인라인**으로 걸고, `send` + `receive` 두 operation 을 만든다.
+ * 공유 `components` 를 만들지 않아 다른 조각과 병합 충돌이 없다.
  */
-internal class SseSnippet(
+internal class WsSnippet(
     private val channelPath: String,
     private val channelProtocol: String,
     private val channelDescription: String,
-    private val operationSummary: String?,
-    private val componentName: String,
-    private val payloadSchema: Map<String, Any>,
-    private val examplePayload: Map<String, Any>,
+    private val send: DocumentedMessage,
+    private val receive: DocumentedMessage,
 ) : AsyncApiSnippet {
 
     override fun toFragment(): Map<String, Any> {
         val channelName = channelNameFromPath(channelPath)
-        val messageKey = componentName.replaceFirstChar { it.lowercaseChar() }
-        val message = DocumentedMessage(componentName, operationSummary, payloadSchema, examplePayload)
+        val sendKey = send.componentName.replaceFirstChar { it.lowercaseChar() }
+        val receiveKey = receive.componentName.replaceFirstChar { it.lowercaseChar() }
 
         return linkedMapOf(
             "channels" to linkedMapOf<String, Any>(
@@ -32,12 +28,14 @@ internal class SseSnippet(
                         linkedMapOf<String, Any>("\$ref" to serverRefFor(channelProtocol)),
                     ),
                     "messages" to linkedMapOf<String, Any>(
-                        messageKey to messageNode(message),
+                        sendKey to messageNode(send),
+                        receiveKey to messageNode(receive),
                     ),
                 ),
             ),
             "operations" to linkedMapOf<String, Any>(
-                "${channelName}Receive" to operationNode("receive", channelName, messageKey, operationSummary),
+                "${channelName}Send" to operationNode("send", channelName, sendKey, send.summary),
+                "${channelName}Receive" to operationNode("receive", channelName, receiveKey, receive.summary),
             ),
         )
     }

@@ -3,6 +3,13 @@ package com.example.asyncapikotlindsl.support.asyncapi.generator
 import com.fasterxml.jackson.core.type.TypeReference
 import java.io.File
 
+// protocol -> #/servers/<name> 참조.
+internal fun serverRefFor(protocol: String): String = "#/servers/" + when {
+    protocol.startsWith("stomp") -> "stomp"
+    protocol.startsWith("ws") -> "websocket"
+    else -> "production"
+}
+
 /**
  * 스니펫 조각을 `build/asyncapi-snippets/` 에 쌓고([writeFragment]),
  * 전부 deep-merge 해 `build/asyncapi/asyncapi.yaml` 로 조립한다([assemble]).
@@ -51,9 +58,17 @@ internal class AsyncApiDocumentStore {
             "version" to DOC_VERSION,
         ),
         "servers" to linkedMapOf<String, Any>(
-            SERVER_NAME to linkedMapOf<String, Any>(
+            "production" to linkedMapOf<String, Any>(
                 "host" to SERVER_HOST,
-                "protocol" to SERVER_PROTOCOL,
+                "protocol" to "https",
+            ),
+            "websocket" to linkedMapOf<String, Any>(
+                "host" to SERVER_HOST,
+                "protocol" to "ws",
+            ),
+            "stomp" to linkedMapOf<String, Any>(
+                "host" to SERVER_HOST,
+                "protocol" to "stomp",
             ),
         ),
     )
@@ -79,9 +94,7 @@ internal class AsyncApiDocumentStore {
         private const val ASYNCAPI_VERSION = "3.0.0"
         private const val DOC_TITLE = "API Document"
         private const val DOC_VERSION = "1.0.0"
-        private const val SERVER_NAME = "production"
         private const val SERVER_HOST = "localhost"
-        private const val SERVER_PROTOCOL = "https"
         private val MAP_TYPE = object : TypeReference<LinkedHashMap<String, Any>>() {}
     }
 }

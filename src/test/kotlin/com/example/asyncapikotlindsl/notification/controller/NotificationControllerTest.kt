@@ -15,7 +15,7 @@ class NotificationControllerTest : AsyncApiDocsTest() {
 
     @Test
     fun `구독자가 연결된 상태에서 알림을 발행하면 구독자가 수신하고 알림이 저장된다`() {
-        documentAsyncApi("notifications/receiveNotification") {
+        documentSse("notifications/receiveNotification") {
             channel(
                 path = "/events/notifications",
                 protocol = "https",

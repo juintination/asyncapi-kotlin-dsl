@@ -20,8 +20,9 @@ repositories {
 }
 
 dependencies {
-    // Web
+    // Web / WebSocket
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-websocket")
 
     // JPA & H2
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
