@@ -1,3 +1,6 @@
 spring:
   application:
     name: asyncapi-kotlin-dsl
+  threads:
+    virtual:
+      enabled: true
