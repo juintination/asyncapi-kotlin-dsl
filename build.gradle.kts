@@ -20,9 +20,8 @@ repositories {
 }
 
 dependencies {
-    // Web & Validation
+    // Web
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-validation")
 
     // JPA & H2
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -40,13 +39,11 @@ dependencies {
 
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
-    // Kotest
-    testImplementation("io.kotest:kotest-runner-junit5:6.1.11")
+    // Test support
+    testImplementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
     testImplementation("io.kotest:kotest-assertions-core:6.1.11")
-    testImplementation("io.kotest:kotest-extensions-spring:6.1.11")
 
     // Logging
     implementation("org.springframework.boot:spring-boot-starter-log4j2")
@@ -64,9 +61,44 @@ kotlin {
     }
 }
 
+allOpen {
+    annotation("jakarta.persistence.Entity")
+    annotation("jakarta.persistence.MappedSuperclass")
+    annotation("jakarta.persistence.Embeddable")
+}
+
+val asyncApiSnippetsDir = layout.buildDirectory.dir("asyncapi-snippets")
+val asyncApiOutputDir = layout.buildDirectory.dir("asyncapi")
+
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+// 통합 테스트가 통과해야 build/asyncapi/asyncapi.yaml 이 생기고,
+// 그 결과물을 static/ 로 복사해 런타임에 앱이 정적 리소스로 서빙한다 (테스트 통과 = 문서 존재).
+val cleanAsyncApiArtifacts = tasks.register<Delete>("cleanAsyncApiArtifacts") {
+    delete(asyncApiSnippetsDir, asyncApiOutputDir)
+}
+
+tasks.test {
+    dependsOn(cleanAsyncApiArtifacts)
+}
+
+val copyAsyncApiSpec = tasks.register<Copy>("copyAsyncApiSpec") {
+    dependsOn(tasks.test)
+    from(asyncApiOutputDir.map { it.file("asyncapi.yaml") })
+    into(layout.buildDirectory.dir("resources/main/static"))
+}
+
+tasks.register("generateDocs") {
+    group = "documentation"
+    description = "통합 테스트 실행 → AsyncAPI 3.0 YAML 생성 → static/ 복사"
+    dependsOn(copyAsyncApiSpec)
+}
+
+tasks.named("resolveMainClassName") { dependsOn(copyAsyncApiSpec) }
+tasks.bootJar { dependsOn(copyAsyncApiSpec) }
+tasks.bootRun { dependsOn(copyAsyncApiSpec) }
 
 tasks.named<Jar>("jar") {
     enabled = false
